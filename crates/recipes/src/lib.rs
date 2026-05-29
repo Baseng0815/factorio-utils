@@ -12,3 +12,5 @@ pub use icon::IconRef;
 pub use machine::{CraftingCategory, Machine, MachineId, MachineKind};
 pub use recipe::{Ingredient, Product, ProductAmount, Recipe, RecipeId};
 pub use resource::{Fluid, FluidId, Item, ItemId, ResourceId};
+
+include!(concat!(env!("OUT_DIR"), "/vanilla_ids.rs"));

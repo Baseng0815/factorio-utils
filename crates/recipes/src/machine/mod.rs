@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 use tracing::{error, instrument, warn};
 
@@ -5,11 +7,15 @@ use crate::icon::IconRef;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct MachineId(String);
+pub struct MachineId(Cow<'static, str>);
 
 impl MachineId {
     pub fn new(name: impl Into<String>) -> Self {
-        Self(name.into())
+        Self(Cow::Owned(name.into()))
+    }
+
+    pub const fn from_static(name: &'static str) -> Self {
+        Self(Cow::Borrowed(name))
     }
 
     pub fn as_str(&self) -> &str {
@@ -19,13 +25,13 @@ impl MachineId {
 
 impl From<String> for MachineId {
     fn from(s: String) -> Self {
-        Self(s)
+        Self(Cow::Owned(s))
     }
 }
 
 impl From<&str> for MachineId {
     fn from(s: &str) -> Self {
-        Self(s.to_owned())
+        Self(Cow::Owned(s.to_owned()))
     }
 }
 
@@ -37,11 +43,15 @@ impl std::fmt::Display for MachineId {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct CraftingCategory(String);
+pub struct CraftingCategory(Cow<'static, str>);
 
 impl CraftingCategory {
     pub fn new(name: impl Into<String>) -> Self {
-        Self(name.into())
+        Self(Cow::Owned(name.into()))
+    }
+
+    pub const fn from_static(name: &'static str) -> Self {
+        Self(Cow::Borrowed(name))
     }
 
     pub fn as_str(&self) -> &str {
@@ -51,13 +61,13 @@ impl CraftingCategory {
 
 impl From<String> for CraftingCategory {
     fn from(s: String) -> Self {
-        Self(s)
+        Self(Cow::Owned(s))
     }
 }
 
 impl From<&str> for CraftingCategory {
     fn from(s: &str) -> Self {
-        Self(s.to_owned())
+        Self(Cow::Owned(s.to_owned()))
     }
 }
 
@@ -91,7 +101,6 @@ impl std::fmt::Display for MachineKind {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Machine {
-    pub id: MachineId,
     pub kind: MachineKind,
     pub crafting_categories: Vec<CraftingCategory>,
     pub crafting_speed: f64,
@@ -106,7 +115,7 @@ impl Machine {
         self.crafting_categories.contains(category)
     }
 
-    #[instrument(level = "trace", skip(self), fields(machine = %self.id))]
+    #[instrument(level = "trace", skip(self))]
     pub fn crafts_per_second(&self, recipe_crafting_time: f64) -> f64 {
         if recipe_crafting_time < 0.0 {
             error!("negative crafting time; treating throughput as zero");
@@ -124,8 +133,7 @@ impl std::fmt::Display for Machine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} ({}) speed={} slots={} energy={} categories=[{}]",
-            self.id,
+            "({}) speed={} slots={} energy={} categories=[{}]",
             self.kind,
             self.crafting_speed,
             self.module_slots,
@@ -160,7 +168,6 @@ mod tests {
 
     fn drill() -> Machine {
         Machine {
-            id: MachineId::from("test-machine"),
             kind: MachineKind::AssemblingMachine,
             crafting_categories: vec![CraftingCategory::from("crafting")],
             crafting_speed: 2.0,

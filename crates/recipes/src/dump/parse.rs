@@ -103,18 +103,16 @@ fn extract_items(db: &mut Database, dump: &Value) -> Result<()> {
         };
         for (name, raw) in entries {
             let raw_item: RawItem = decode(prototype, name, raw)?;
-            let id = ItemId::from(name.as_str());
             trace!(
                 prototype = prototype,
-                item = %id,
+                item = %name,
                 stack_size = raw_item.stack_size,
                 "registered item",
             );
             let icon = extract_icon(&raw_item.icon);
             db.items.insert(
-                id.clone(),
+                ItemId::from(name.as_str()),
                 Item {
-                    id,
                     stack_size: raw_item.stack_size,
                     icon,
                 },
@@ -133,17 +131,15 @@ fn extract_fluids(db: &mut Database, dump: &Value) -> Result<()> {
     let before = db.fluids.len();
     for (name, raw) in entries {
         let raw_fluid: RawFluid = decode("fluid", name, raw)?;
-        let id = FluidId::from(name.as_str());
         trace!(
-            fluid = %id,
+            fluid = %name,
             default_temperature = raw_fluid.default_temperature,
             "registered fluid",
         );
         let icon = extract_icon(&raw_fluid.icon);
         db.fluids.insert(
-            id.clone(),
+            FluidId::from(name.as_str()),
             Fluid {
-                id,
                 default_temperature: raw_fluid.default_temperature,
                 icon,
             },
@@ -162,9 +158,9 @@ fn extract_machines(db: &mut Database, dump: &Value) -> Result<()> {
         };
         for (name, raw) in entries {
             let raw_machine: RawMachine = decode(prototype, name, raw)?;
-            let machine = build_machine(name, *kind, raw_machine)?;
+            let machine = build_machine(*kind, raw_machine)?;
             trace!(
-                machine = %machine.id,
+                machine = %name,
                 kind = ?machine.kind,
                 categories = ?machine.crafting_categories,
                 crafting_speed = machine.crafting_speed,
@@ -172,7 +168,7 @@ fn extract_machines(db: &mut Database, dump: &Value) -> Result<()> {
                 energy_watts = machine.energy_usage_watts,
                 "registered machine",
             );
-            db.machines.insert(machine.id.clone(), machine);
+            db.machines.insert(MachineId::from(name.as_str()), machine);
         }
     }
     info!(count = db.machines.len() - before, "loaded machines");
@@ -187,22 +183,22 @@ fn extract_mining_drills(db: &mut Database, dump: &Value) -> Result<()> {
     let before = db.machines.len();
     for (name, raw) in entries {
         let raw_drill: RawMiningDrill = decode("mining-drill", name, raw)?;
-        let drill = build_mining_drill(name, raw_drill)?;
+        let drill = build_mining_drill(raw_drill)?;
         trace!(
-            drill = %drill.id,
+            drill = %name,
             categories = ?drill.crafting_categories,
             mining_speed = drill.crafting_speed,
             module_slots = drill.module_slots,
             energy_watts = drill.energy_usage_watts,
             "registered mining drill",
         );
-        db.machines.insert(drill.id.clone(), drill);
+        db.machines.insert(MachineId::from(name.as_str()), drill);
     }
     info!(count = db.machines.len() - before, "loaded mining drills");
     Ok(())
 }
 
-fn build_mining_drill(name: &str, raw: RawMiningDrill) -> Result<Machine> {
+fn build_mining_drill(raw: RawMiningDrill) -> Result<Machine> {
     let module_slots = raw
         .module_slots
         .or_else(|| raw.module_specification.as_ref().map(|s| s.module_slots))
@@ -215,7 +211,6 @@ fn build_mining_drill(name: &str, raw: RawMiningDrill) -> Result<Machine> {
         .map(CraftingCategory::from)
         .collect();
     Ok(Machine {
-        id: MachineId::from(name),
         kind: MachineKind::MiningDrill,
         crafting_categories,
         crafting_speed: raw.mining_speed,
@@ -241,14 +236,14 @@ fn extract_resources(db: &mut Database, dump: &Value) -> Result<()> {
         };
         let recipe = build_mining_recipe(name, raw_resource.category, minable)?;
         trace!(
-            resource = %recipe.id,
+            resource = %name,
             category = %recipe.category,
             mining_time = recipe.crafting_time,
             ingredients = recipe.ingredients.len(),
             products = recipe.products.len(),
             "synthesized mining recipe",
         );
-        db.recipes.insert(recipe.id.clone(), recipe);
+        db.recipes.insert(RecipeId::from(name.as_str()), recipe);
     }
     info!(
         synthesized = db.recipes.len() - before,
@@ -269,7 +264,6 @@ fn build_mining_recipe(name: &str, category: String, minable: RawMinable) -> Res
     let ingredients = mining_ingredients(minable.required_fluid.clone(), minable.fluid_amount);
     let products = mining_products(name, minable.result, minable.count, minable.results)?;
     Ok(Recipe {
-        id: RecipeId::from(name),
         category: CraftingCategory::from(category),
         ingredients,
         products,
@@ -315,7 +309,7 @@ fn extract_recipes(db: &mut Database, dump: &Value) -> Result<()> {
         let raw_recipe: RawRecipe = decode("recipe", name, raw)?;
         let recipe = build_recipe(name, raw_recipe)?;
         trace!(
-            recipe = %recipe.id,
+            recipe = %name,
             category = %recipe.category,
             crafting_time = recipe.crafting_time,
             ingredients = recipe.ingredients.len(),
@@ -323,7 +317,7 @@ fn extract_recipes(db: &mut Database, dump: &Value) -> Result<()> {
             allow_productivity = recipe.allow_productivity,
             "registered recipe",
         );
-        db.recipes.insert(recipe.id.clone(), recipe);
+        db.recipes.insert(RecipeId::from(name.as_str()), recipe);
     }
     info!(count = db.recipes.len() - before, "loaded crafting recipes");
     Ok(())
@@ -337,7 +331,7 @@ fn decode<T: serde::de::DeserializeOwned>(kind: &'static str, name: &str, raw: &
     })
 }
 
-fn build_machine(name: &str, kind: MachineKind, raw: RawMachine) -> Result<Machine> {
+fn build_machine(kind: MachineKind, raw: RawMachine) -> Result<Machine> {
     let module_slots = raw
         .module_slots
         .or_else(|| raw.module_specification.as_ref().map(|s| s.module_slots))
@@ -350,7 +344,6 @@ fn build_machine(name: &str, kind: MachineKind, raw: RawMachine) -> Result<Machi
         .map(CraftingCategory::from)
         .collect();
     Ok(Machine {
-        id: MachineId::from(name),
         kind,
         crafting_categories,
         crafting_speed: raw.crafting_speed,
@@ -379,7 +372,6 @@ fn build_recipe(name: &str, raw: RawRecipe) -> Result<Recipe> {
         .map(build_product)
         .collect::<Result<Vec<_>>>()?;
     Ok(Recipe {
-        id: RecipeId::from(name),
         category: CraftingCategory::from(raw.category),
         ingredients,
         products,
@@ -487,19 +479,19 @@ mod tests {
         assert_eq!(db.machines.len(), 2);
         assert_eq!(db.recipes.len(), 1);
 
-        let recipe = db.recipe(&RecipeId::from("iron-plate")).unwrap();
+        let recipe = &db[&RecipeId::from("iron-plate")];
         assert_eq!(recipe.category.as_str(), "smelting");
         assert_eq!(recipe.crafting_time, 3.2);
         assert_eq!(recipe.ingredients.len(), 1);
         assert_eq!(recipe.products.len(), 1);
 
-        let furnace = db.machine(&MachineId::from("stone-furnace")).unwrap();
+        let furnace = &db[&MachineId::from("stone-furnace")];
         assert_eq!(furnace.crafting_speed, 1.0);
         assert_eq!(furnace.energy_usage_watts, 90_000.0);
 
         let smelters: Vec<_> = db
             .machines_for_recipe(recipe)
-            .map(|m| m.id.as_str().to_owned())
+            .map(|m| m.as_str().to_owned())
             .collect();
         assert_eq!(smelters, vec!["stone-furnace"]);
     }
@@ -556,19 +548,19 @@ mod tests {
         init_tracing();
         let db = from_str(MINING_SAMPLE).unwrap();
 
-        let drill = db.machine(&MachineId::from("electric-mining-drill")).unwrap();
+        let drill = &db[&MachineId::from("electric-mining-drill")];
         assert_eq!(drill.kind, MachineKind::MiningDrill);
         assert_eq!(drill.crafting_speed, 0.5);
         assert!(drill.supports(&CraftingCategory::from("basic-solid")));
 
-        let iron = db.recipe(&RecipeId::from("iron-ore")).unwrap();
+        let iron = &db[&RecipeId::from("iron-ore")];
         assert!(iron.ingredients.is_empty());
-        assert_eq!(iron.expected_yield("iron-ore"), 1.0);
+        assert_eq!(iron.expected_yield(&ItemId::from("iron-ore").into()), 1.0);
         assert_eq!(iron.crafting_time, 1.0);
 
         let drills: Vec<_> = db
             .machines_for_recipe(iron)
-            .map(|m| m.id.as_str().to_owned())
+            .map(|m| m.as_str().to_owned())
             .collect();
         assert_eq!(drills, vec!["electric-mining-drill"]);
     }
@@ -577,11 +569,11 @@ mod tests {
     fn mining_with_required_fluid_divides_amount_by_ten() {
         init_tracing();
         let db = from_str(MINING_SAMPLE).unwrap();
-        let uranium = db.recipe(&RecipeId::from("uranium-ore")).unwrap();
+        let uranium = &db[&RecipeId::from("uranium-ore")];
         assert_eq!(uranium.ingredients.len(), 1);
         let acid = &uranium.ingredients[0];
         assert!(acid.resource.is_fluid());
-        assert_eq!(acid.resource.name(), "sulfuric-acid");
+        assert_eq!(acid.resource.as_str(), "sulfuric-acid");
         assert!((acid.amount - 1.0).abs() < 1e-9);
     }
 
@@ -589,16 +581,78 @@ mod tests {
     fn pumpjack_extracts_fluid() {
         init_tracing();
         let db = from_str(MINING_SAMPLE).unwrap();
-        let oil = db.recipe(&RecipeId::from("crude-oil")).unwrap();
+        let oil = &db[&RecipeId::from("crude-oil")];
         assert_eq!(oil.products.len(), 1);
         assert!(oil.products[0].resource.is_fluid());
-        assert_eq!(oil.expected_yield("crude-oil"), 10.0);
+        assert_eq!(oil.expected_yield(&FluidId::from("crude-oil").into()), 10.0);
 
         let drills: Vec<_> = db
             .machines_for_recipe(oil)
-            .map(|m| m.id.as_str().to_owned())
+            .map(|m| m.as_str().to_owned())
             .collect();
         assert_eq!(drills, vec!["pumpjack"]);
+    }
+
+    #[test]
+    fn parses_icon_field_for_item() {
+        init_tracing();
+        let dump = r#"{
+            "item": {
+                "iron-plate": {
+                    "stack_size": 100,
+                    "icon": "__base__/graphics/icons/iron-plate.png",
+                    "icon_size": 64
+                }
+            }
+        }"#;
+        let db = from_str(dump).unwrap();
+        let icon = db[&ItemId::from("iron-plate")].icon.as_ref().unwrap();
+        assert_eq!(icon.path, "__base__/graphics/icons/iron-plate.png");
+        assert_eq!(icon.size, 64);
+    }
+
+    #[test]
+    fn falls_back_to_first_icon_layer() {
+        init_tracing();
+        let dump = r#"{
+            "fluid": {
+                "lubricant": {
+                    "default_temperature": 25,
+                    "icons": [
+                        {"icon": "__base__/graphics/icons/lubricant.png", "icon_size": 32},
+                        {"icon": "__base__/graphics/icons/overlay.png"}
+                    ]
+                }
+            }
+        }"#;
+        let db = from_str(dump).unwrap();
+        let icon = db[&FluidId::from("lubricant")].icon.as_ref().unwrap();
+        assert_eq!(icon.path, "__base__/graphics/icons/lubricant.png");
+        assert_eq!(icon.size, 32);
+    }
+
+    #[test]
+    fn icon_defaults_to_64_when_size_missing() {
+        init_tracing();
+        let dump = r#"{
+            "item": {
+                "thing": {
+                    "stack_size": 1,
+                    "icon": "__base__/graphics/icons/thing.png"
+                }
+            }
+        }"#;
+        let db = from_str(dump).unwrap();
+        let icon = db[&ItemId::from("thing")].icon.as_ref().unwrap();
+        assert_eq!(icon.size, 64);
+    }
+
+    #[test]
+    fn item_without_icon_is_none() {
+        init_tracing();
+        let dump = r#"{ "item": { "x": { "stack_size": 1 } } }"#;
+        let db = from_str(dump).unwrap();
+        assert!(db[&ItemId::from("x")].icon.is_none());
     }
 
     #[test]
@@ -618,8 +672,8 @@ mod tests {
             }
         }"#;
         let db = from_str(dump).unwrap();
-        let r = db.recipe(&RecipeId::from("uranium-ore-processing")).unwrap();
-        let yield_235 = r.expected_yield("uranium-235");
+        let r = &db[&RecipeId::from("uranium-ore-processing")];
+        let yield_235 = r.expected_yield(&ItemId::from("uranium-235").into());
         assert!((yield_235 - 0.007).abs() < 1e-9);
     }
 }

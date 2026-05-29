@@ -4,17 +4,23 @@ mod product;
 pub use ingredient::Ingredient;
 pub use product::{Product, ProductAmount};
 
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 
-use crate::machine::CraftingCategory;
+use crate::{machine::CraftingCategory, ResourceId};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct RecipeId(String);
+pub struct RecipeId(Cow<'static, str>);
 
 impl RecipeId {
     pub fn new(name: impl Into<String>) -> Self {
-        Self(name.into())
+        Self(Cow::Owned(name.into()))
+    }
+
+    pub const fn from_static(name: &'static str) -> Self {
+        Self(Cow::Borrowed(name))
     }
 
     pub fn as_str(&self) -> &str {
@@ -24,13 +30,13 @@ impl RecipeId {
 
 impl From<String> for RecipeId {
     fn from(s: String) -> Self {
-        Self(s)
+        Self(Cow::Owned(s))
     }
 }
 
 impl From<&str> for RecipeId {
     fn from(s: &str) -> Self {
-        Self(s.to_owned())
+        Self(Cow::Owned(s.to_owned()))
     }
 }
 
@@ -42,7 +48,6 @@ impl std::fmt::Display for RecipeId {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Recipe {
-    pub id: RecipeId,
     pub category: CraftingCategory,
     pub ingredients: Vec<Ingredient>,
     pub products: Vec<Product>,
@@ -51,22 +56,24 @@ pub struct Recipe {
 }
 
 impl Recipe {
-    pub fn produces(&self, resource_name: &str) -> bool {
-        self.products
-            .iter()
-            .any(|p| p.resource.name() == resource_name)
+    pub fn produces(&self, resource: impl Into<ResourceId>) -> bool {
+        let resource: ResourceId = resource.into();
+
+        self.products.iter().any(|p| p.resource == resource)
     }
 
-    pub fn consumes(&self, resource_name: &str) -> bool {
-        self.ingredients
-            .iter()
-            .any(|i| i.resource.name() == resource_name)
+    pub fn consumes(&self, resource: impl Into<ResourceId>) -> bool {
+        let resource: ResourceId = resource.into();
+
+        self.ingredients.iter().any(|i| i.resource == resource)
     }
 
-    pub fn expected_yield(&self, resource_name: &str) -> f64 {
+    pub fn expected_yield(&self, resource: impl Into<ResourceId>) -> f64 {
+        let resource: ResourceId = resource.into();
+
         self.products
             .iter()
-            .filter(|p| p.resource.name() == resource_name)
+            .filter(|p| p.resource == resource)
             .map(Product::expected_amount)
             .sum()
     }
@@ -79,14 +86,14 @@ impl std::fmt::Display for Recipe {
         if ingredients.is_empty() {
             write!(
                 f,
-                "{} → {} ({}s, {})",
-                self.id, products, self.crafting_time, self.category,
+                "→ {} ({}s, {})",
+                products, self.crafting_time, self.category,
             )
         } else {
             write!(
                 f,
-                "{}: {} → {} ({}s, {})",
-                self.id, ingredients, products, self.crafting_time, self.category,
+                "{} → {} ({}s, {})",
+                ingredients, products, self.crafting_time, self.category,
             )
         }
     }
