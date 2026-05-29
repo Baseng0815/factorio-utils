@@ -320,11 +320,13 @@ fn mining_recursion_emits_raw_for_fluids_with_no_recipe() {
 }
 
 #[test]
-fn no_recipe_for_target_errors() {
+fn target_with_no_recipe_becomes_raw_input() {
     init_tracing();
     let dump_text = r#"{ "item": { "x": { "stack_size": 1 } } }"#;
     let db = dump::from_str(dump_text).unwrap();
     let request = PlanRequest::new().want(item("x"), Rate::per_second(1.0));
-    let err = plan(&db, &request).unwrap_err();
-    assert!(matches!(err, planner::Error::NoRecipe(_)));
+    let line = plan(&db, &request).unwrap();
+    assert!(line.nodes.is_empty());
+    let raw = line.raw_inputs.get(&item("x")).unwrap();
+    assert!((raw.as_per_second() - 1.0).abs() < 1e-9);
 }

@@ -32,7 +32,7 @@ impl std::fmt::Display for ProductionNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} {} × {} (recipe {}, {:.3} runs/s)",
+            "{} {:.2} × {} (recipe {}, {:.3} runs/s)",
             self.id, self.machines_needed, self.machine, self.recipe, self.runs_per_second,
         )
     }

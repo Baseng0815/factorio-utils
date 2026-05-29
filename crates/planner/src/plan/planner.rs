@@ -122,6 +122,9 @@ impl<'a> Planner<'a> {
         if self.config.raw.contains(resource) {
             return true;
         }
+        if self.config.recipe_for.contains_key(resource) {
+            return false;
+        }
         self.db
             .recipes_producing(resource.name())
             .next()
