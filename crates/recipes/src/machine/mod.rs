@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use tracing::{error, instrument, warn};
 
+use crate::icon::IconRef;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct MachineId(String);
@@ -95,6 +97,8 @@ pub struct Machine {
     pub crafting_speed: f64,
     pub module_slots: u32,
     pub energy_usage_watts: f64,
+    #[serde(default)]
+    pub icon: Option<IconRef>,
 }
 
 impl Machine {
@@ -162,6 +166,7 @@ mod tests {
             crafting_speed: 2.0,
             module_slots: 0,
             energy_usage_watts: 0.0,
+            icon: None,
         }
     }
 

@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::icon::IconRef;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct FluidId(String);
@@ -36,6 +38,8 @@ impl std::fmt::Display for FluidId {
 pub struct Fluid {
     pub id: FluidId,
     pub default_temperature: f64,
+    #[serde(default)]
+    pub icon: Option<IconRef>,
 }
 
 impl std::fmt::Display for Fluid {

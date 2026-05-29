@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::icon::IconRef;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct ItemId(String);
@@ -36,6 +38,8 @@ impl std::fmt::Display for ItemId {
 pub struct Item {
     pub id: ItemId,
     pub stack_size: u32,
+    #[serde(default)]
+    pub icon: Option<IconRef>,
 }
 
 impl std::fmt::Display for Item {

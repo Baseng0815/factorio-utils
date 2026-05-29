@@ -59,9 +59,28 @@ fn default_probability() -> f64 {
 }
 
 #[derive(Debug, Deserialize)]
+pub(super) struct RawIconLayer {
+    pub icon: String,
+    #[serde(default)]
+    pub icon_size: Option<u32>,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub(super) struct RawIconFields {
+    #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
+    pub icon_size: Option<u32>,
+    #[serde(default)]
+    pub icons: Option<Vec<RawIconLayer>>,
+}
+
+#[derive(Debug, Deserialize)]
 pub(super) struct RawItem {
     #[serde(default = "default_stack_size")]
     pub stack_size: u32,
+    #[serde(flatten)]
+    pub icon: RawIconFields,
 }
 
 fn default_stack_size() -> u32 {
@@ -72,6 +91,8 @@ fn default_stack_size() -> u32 {
 pub(super) struct RawFluid {
     #[serde(default)]
     pub default_temperature: f64,
+    #[serde(flatten)]
+    pub icon: RawIconFields,
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,6 +104,8 @@ pub(super) struct RawMachine {
     pub module_slots: Option<u32>,
     #[serde(default)]
     pub module_specification: Option<RawModuleSpec>,
+    #[serde(flatten)]
+    pub icon: RawIconFields,
 }
 
 #[derive(Debug, Deserialize)]
@@ -100,6 +123,8 @@ pub(super) struct RawMiningDrill {
     pub module_slots: Option<u32>,
     #[serde(default)]
     pub module_specification: Option<RawModuleSpec>,
+    #[serde(flatten)]
+    pub icon: RawIconFields,
 }
 
 #[derive(Debug, Deserialize)]

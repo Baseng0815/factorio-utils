@@ -28,7 +28,7 @@ fn init_tracing() {
 }
 
 fn dump_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/database-dump.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/data-raw-dump.json")
 }
 
 fn print_database(db: &Database) {

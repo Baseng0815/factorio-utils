@@ -7,11 +7,12 @@ use tracing::{info, info_span, instrument, trace, warn};
 
 use super::energy::parse_energy;
 use super::raw::{
-    RawFluid, RawIngredient, RawItem, RawMachine, RawMinable, RawMiningDrill, RawProduct,
-    RawRecipe, RawResource,
+    RawFluid, RawIconFields, RawIngredient, RawItem, RawMachine, RawMinable, RawMiningDrill,
+    RawProduct, RawRecipe, RawResource,
 };
 use crate::database::Database;
 use crate::error::{Error, Result};
+use crate::icon::{DEFAULT_ICON_SIZE, IconRef};
 use crate::machine::{CraftingCategory, Machine, MachineId, MachineKind};
 use crate::recipe::{Ingredient, Product, ProductAmount, Recipe, RecipeId};
 use crate::resource::{Fluid, FluidId, Item, ItemId, ResourceId};
@@ -109,11 +110,13 @@ fn extract_items(db: &mut Database, dump: &Value) -> Result<()> {
                 stack_size = raw_item.stack_size,
                 "registered item",
             );
+            let icon = extract_icon(&raw_item.icon);
             db.items.insert(
                 id.clone(),
                 Item {
                     id,
                     stack_size: raw_item.stack_size,
+                    icon,
                 },
             );
         }
@@ -136,11 +139,13 @@ fn extract_fluids(db: &mut Database, dump: &Value) -> Result<()> {
             default_temperature = raw_fluid.default_temperature,
             "registered fluid",
         );
+        let icon = extract_icon(&raw_fluid.icon);
         db.fluids.insert(
             id.clone(),
             Fluid {
                 id,
                 default_temperature: raw_fluid.default_temperature,
+                icon,
             },
         );
     }
@@ -203,6 +208,7 @@ fn build_mining_drill(name: &str, raw: RawMiningDrill) -> Result<Machine> {
         .or_else(|| raw.module_specification.as_ref().map(|s| s.module_slots))
         .unwrap_or(0);
     let energy_usage_watts = parse_energy(&raw.energy_usage)?;
+    let icon = extract_icon(&raw.icon);
     let crafting_categories = raw
         .resource_categories
         .into_iter()
@@ -215,6 +221,7 @@ fn build_mining_drill(name: &str, raw: RawMiningDrill) -> Result<Machine> {
         crafting_speed: raw.mining_speed,
         module_slots,
         energy_usage_watts,
+        icon,
     })
 }
 
@@ -336,6 +343,7 @@ fn build_machine(name: &str, kind: MachineKind, raw: RawMachine) -> Result<Machi
         .or_else(|| raw.module_specification.as_ref().map(|s| s.module_slots))
         .unwrap_or(0);
     let energy_usage_watts = parse_energy(&raw.energy_usage)?;
+    let icon = extract_icon(&raw.icon);
     let crafting_categories = raw
         .crafting_categories
         .into_iter()
@@ -348,6 +356,7 @@ fn build_machine(name: &str, kind: MachineKind, raw: RawMachine) -> Result<Machi
         crafting_speed: raw.crafting_speed,
         module_slots,
         energy_usage_watts,
+        icon,
     })
 }
 
@@ -397,6 +406,21 @@ fn build_product(raw: RawProduct) -> Result<Product> {
         amount,
         probability: raw.probability,
     })
+}
+
+fn extract_icon(raw: &RawIconFields) -> Option<IconRef> {
+    if let Some(path) = &raw.icon {
+        return Some(IconRef::new(
+            path.clone(),
+            raw.icon_size.unwrap_or(DEFAULT_ICON_SIZE),
+        ));
+    }
+    let layers = raw.icons.as_ref()?;
+    let first = layers.first()?;
+    Some(IconRef::new(
+        first.icon.clone(),
+        first.icon_size.or(raw.icon_size).unwrap_or(DEFAULT_ICON_SIZE),
+    ))
 }
 
 fn resource_id(ty: &str, name: &str) -> Result<ResourceId> {
