@@ -6,7 +6,7 @@ pub use node::{NodeId, ProductionNode};
 
 use std::collections::HashMap;
 
-use recipes::ResourceId;
+use prototypes::ResourceId;
 
 use crate::rate::Rate;
 

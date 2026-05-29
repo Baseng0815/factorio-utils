@@ -7,8 +7,8 @@ use tracing::{info, info_span, instrument, trace, warn};
 
 use super::energy::parse_energy;
 use super::raw::{
-    RawFluid, RawIconFields, RawIngredient, RawItem, RawMachine, RawMinable, RawMiningDrill,
-    RawProduct, RawRecipe, RawResource,
+    RawBoundingBox, RawFluid, RawIconFields, RawIngredient, RawItem, RawMachine, RawMinable,
+    RawMiningDrill, RawProduct, RawRecipe, RawResource,
 };
 use crate::database::Database;
 use crate::error::{Error, Result};
@@ -210,14 +210,40 @@ fn build_mining_drill(raw: RawMiningDrill) -> Result<Machine> {
         .into_iter()
         .map(CraftingCategory::from)
         .collect();
+    let (tile_width, tile_height) = resolve_tile_size(
+        raw.tile_width,
+        raw.tile_height,
+        raw.selection_box.as_ref(),
+        raw.collision_box.as_ref(),
+    );
     Ok(Machine {
         kind: MachineKind::MiningDrill,
         crafting_categories,
         crafting_speed: raw.mining_speed,
         module_slots,
         energy_usage_watts,
+        tile_width,
+        tile_height,
         icon,
     })
+}
+
+fn resolve_tile_size(
+    tile_width: Option<u32>,
+    tile_height: Option<u32>,
+    selection_box: Option<&RawBoundingBox>,
+    collision_box: Option<&RawBoundingBox>,
+) -> (u32, u32) {
+    let from_box = selection_box.or(collision_box).map(tile_size_from_box);
+    let w = tile_width.or(from_box.map(|(w, _)| w)).unwrap_or(1);
+    let h = tile_height.or(from_box.map(|(_, h)| h)).unwrap_or(1);
+    (w, h)
+}
+
+fn tile_size_from_box(b: &RawBoundingBox) -> (u32, u32) {
+    let w = (b.max[0] - b.min[0]).ceil().max(1.0) as u32;
+    let h = (b.max[1] - b.min[1]).ceil().max(1.0) as u32;
+    (w, h)
 }
 
 #[instrument(level = "debug", skip_all)]
@@ -343,12 +369,20 @@ fn build_machine(kind: MachineKind, raw: RawMachine) -> Result<Machine> {
         .into_iter()
         .map(CraftingCategory::from)
         .collect();
+    let (tile_width, tile_height) = resolve_tile_size(
+        raw.tile_width,
+        raw.tile_height,
+        raw.selection_box.as_ref(),
+        raw.collision_box.as_ref(),
+    );
     Ok(Machine {
         kind,
         crafting_categories,
         crafting_speed: raw.crafting_speed,
         module_slots,
         energy_usage_watts,
+        tile_width,
+        tile_height,
         icon,
     })
 }

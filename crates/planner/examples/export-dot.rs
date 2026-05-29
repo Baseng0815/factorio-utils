@@ -2,7 +2,7 @@ use std::io::{self, BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use recipes::{dump, ItemId};
+use prototypes::{dump, ItemId};
 use tracing_subscriber::EnvFilter;
 
 use planner::export::write_dot;
@@ -58,5 +58,5 @@ fn init_tracing() {
 }
 
 fn dump_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../recipes/resources/data-raw-dump.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../prototypes/resources/data-raw-dump.json")
 }

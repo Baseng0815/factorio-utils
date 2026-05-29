@@ -58,8 +58,11 @@ fn splitter_color(name: &str) -> Color {
     }
 }
 
-pub fn size_for(kind: &EntityKind) -> (f64, f64) {
-    match kind {
+pub fn size_for(entity: &Entity) -> (f64, f64) {
+    if let Some(specific) = name_specific_size(entity.name.as_str()) {
+        return specific;
+    }
+    match &entity.kind {
         EntityKind::AssemblingMachine(_) => (3.0, 3.0),
         EntityKind::Furnace(_) => (2.0, 2.0),
         EntityKind::MiningDrill(_) => (3.0, 3.0),
@@ -72,6 +75,19 @@ pub fn size_for(kind: &EntityKind) -> (f64, f64) {
         EntityKind::Pump(_) => (1.0, 2.0),
         EntityKind::Chest(_) => (1.0, 1.0),
         EntityKind::PowerPole(_) => (1.0, 1.0),
+    }
+}
+
+fn name_specific_size(name: &str) -> Option<(f64, f64)> {
+    match name {
+        "electromagnetic-plant" => Some((4.0, 4.0)),
+        "cryogenic-plant" => Some((7.0, 5.0)),
+        "biochamber" => Some((3.0, 3.0)),
+        "electric-furnace" => Some((3.0, 3.0)),
+        "rocket-silo" => Some((9.0, 9.0)),
+        "big-mining-drill" => Some((5.0, 5.0)),
+        "steel-chest" | "iron-chest" | "wooden-chest" => Some((1.0, 1.0)),
+        _ => None,
     }
 }
 

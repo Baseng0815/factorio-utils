@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use recipes::{Database, IconRef, ResourceId, dump};
+use prototypes::{Database, IconRef, ResourceId, dump};
 
 use planner::export::write_dot;
 use planner::{IconResolver, PlanConfig, PlanRequest, Rate, plan};
@@ -152,7 +152,7 @@ fn html_escapes_special_characters_in_resource_names() {
     let mut db = Database::new();
     db.items.insert(
         "weird&name".into(),
-        recipes::Item {
+        prototypes::Item {
             stack_size: 1,
             icon: None,
         },

@@ -126,7 +126,7 @@ impl std::fmt::Display for Entity {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use recipes::RecipeId;
+    use prototypes::RecipeId;
 
     #[test]
     fn entity_new_builds_with_defaults() {

@@ -1,4 +1,4 @@
-use recipes::ItemId;
+use prototypes::ItemId;
 
 use super::ItemStack;
 

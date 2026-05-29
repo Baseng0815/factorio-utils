@@ -1,4 +1,4 @@
-use recipes::ItemId;
+use prototypes::ItemId;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Inserter {

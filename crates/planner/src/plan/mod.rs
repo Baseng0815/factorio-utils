@@ -2,7 +2,7 @@ mod planner;
 
 use tracing::{info, instrument};
 
-use recipes::Database;
+use prototypes::Database;
 
 use crate::config::PlanRequest;
 use crate::error::Result;

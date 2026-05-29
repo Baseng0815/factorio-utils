@@ -11,7 +11,7 @@ derive_more = { version = "2.0.1", features = ["from", "into", "display"] }
 flate2 = "1"
 image = { version = "0.25", default-features = false, features = ["png"] }
 itertools = "0.14.0"
-recipes = { path = "../recipes" }
+prototypes = { path = "../prototypes" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

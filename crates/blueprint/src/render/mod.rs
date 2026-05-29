@@ -1,6 +1,8 @@
 mod palette;
 mod raster;
 
+pub use palette::size_for;
+
 use std::io::Cursor;
 use std::path::Path;
 
@@ -11,7 +13,7 @@ use crate::entity::Entity;
 use crate::error::{Error, Result};
 use crate::world::{Direction, World};
 
-use self::palette::{Color, color_for, darken, lighten, size_for};
+use self::palette::{Color, color_for, darken, lighten};
 use self::raster::{draw_grid, fill_background, fill_rect, stroke_rect};
 
 #[derive(Debug, Clone)]
@@ -123,7 +125,7 @@ fn compute_bounds(world: &World) -> WorldBounds {
     };
     let mut initialised = false;
     for entity in world.entities() {
-        let (w, h) = size_for(&entity.kind);
+        let (w, h) = size_for(entity);
         let x0 = entity.position.x - w / 2.0;
         let y0 = entity.position.y - h / 2.0;
         let x1 = entity.position.x + w / 2.0;
@@ -156,7 +158,7 @@ fn image_dimensions(bounds: &WorldBounds, config: &RenderConfig) -> (u32, u32) {
 }
 
 fn draw_entity(image: &mut RgbaImage, entity: &Entity, bounds: &WorldBounds, config: &RenderConfig) {
-    let (w, h) = size_for(&entity.kind);
+    let (w, h) = size_for(entity);
     let color = color_for(entity);
     let (x0, y0, x1, y1) = entity_pixels(entity, bounds, config, w, h);
     fill_rect(image, x0, y0, x1, y1, color);

@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use recipes::IconRef;
+use prototypes::IconRef;
 
 pub trait IconResolver {
     fn resolve(&self, icon: &IconRef) -> Option<PathBuf>;

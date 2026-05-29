@@ -1,4 +1,4 @@
-use recipes::{Database, IconRef, MachineId, ResourceId};
+use prototypes::{Database, IconRef, MachineId, ResourceId};
 
 use crate::icons::IconResolver;
 use crate::line::{ProductionEdge, ProductionNode};

@@ -1,4 +1,4 @@
-use recipes::ItemId;
+use prototypes::ItemId;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ItemStack {

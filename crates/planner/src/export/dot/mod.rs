@@ -5,7 +5,7 @@ use std::io::{self, Write};
 
 use tracing::instrument;
 
-use recipes::{Database, ResourceId};
+use prototypes::{Database, ResourceId};
 
 use crate::icons::IconResolver;
 use crate::line::{EdgeEndpoint, ProductionEdge, ProductionLine};

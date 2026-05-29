@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use recipes::{CraftingCategory, MachineId, RecipeId, ResourceId};
+use prototypes::{CraftingCategory, MachineId, RecipeId, ResourceId};
 
 use crate::rate::Rate;
 

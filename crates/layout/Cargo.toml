@@ -1,15 +1,17 @@
 [package]
-name = "planner"
+name = "layout"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-itertools = "0.14.0"
+blueprint = { path = "../blueprint" }
+planner = { path = "../planner" }
 prototypes = { path = "../prototypes" }
 thiserror = { workspace = true }
 tracing = { workspace = true }
+z3 = "0.12"
 
 [dev-dependencies]
 tracing-subscriber = { workspace = true }

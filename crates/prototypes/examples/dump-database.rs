@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use recipes::{Database, dump};
+use prototypes::{Database, dump};
 use tracing_subscriber::EnvFilter;
 
 fn main() -> ExitCode {

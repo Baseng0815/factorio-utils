@@ -104,6 +104,14 @@ pub(super) struct RawMachine {
     pub module_slots: Option<u32>,
     #[serde(default)]
     pub module_specification: Option<RawModuleSpec>,
+    #[serde(default)]
+    pub tile_width: Option<u32>,
+    #[serde(default)]
+    pub tile_height: Option<u32>,
+    #[serde(default)]
+    pub collision_box: Option<RawBoundingBox>,
+    #[serde(default)]
+    pub selection_box: Option<RawBoundingBox>,
     #[serde(flatten)]
     pub icon: RawIconFields,
 }
@@ -123,8 +131,32 @@ pub(super) struct RawMiningDrill {
     pub module_slots: Option<u32>,
     #[serde(default)]
     pub module_specification: Option<RawModuleSpec>,
+    #[serde(default)]
+    pub tile_width: Option<u32>,
+    #[serde(default)]
+    pub tile_height: Option<u32>,
+    #[serde(default)]
+    pub collision_box: Option<RawBoundingBox>,
+    #[serde(default)]
+    pub selection_box: Option<RawBoundingBox>,
     #[serde(flatten)]
     pub icon: RawIconFields,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(from = "[[f64; 2]; 2]")]
+pub(super) struct RawBoundingBox {
+    pub min: [f64; 2],
+    pub max: [f64; 2],
+}
+
+impl From<[[f64; 2]; 2]> for RawBoundingBox {
+    fn from(arr: [[f64; 2]; 2]) -> Self {
+        Self {
+            min: arr[0],
+            max: arr[1],
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]

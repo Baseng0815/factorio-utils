@@ -1,6 +1,6 @@
 use tracing::{info, instrument, trace, warn};
 
-use recipes::{ItemId, RecipeId};
+use prototypes::{ItemId, RecipeId};
 
 use super::kind_table::{KindHint, hint_for};
 use crate::entity::{

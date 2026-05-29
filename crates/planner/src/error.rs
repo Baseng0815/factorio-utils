@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use recipes::{CraftingCategory, MachineId, RecipeId, ResourceId};
+use prototypes::{CraftingCategory, MachineId, RecipeId, ResourceId};
 
 #[derive(Debug, Error)]
 pub enum Error {

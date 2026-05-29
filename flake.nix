@@ -37,8 +37,12 @@
             rustToolchain
             pkgs.pkg-config
             pkgs.cargo-nextest
+            pkgs.z3
+            pkgs.llvmPackages.libclang
           ];
           RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
+          LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
+          BINDGEN_EXTRA_CLANG_ARGS = "-I${pkgs.z3.dev}/include";
 
           shellHook = ''
             zsh

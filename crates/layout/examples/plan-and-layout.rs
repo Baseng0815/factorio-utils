@@ -5,7 +5,10 @@ use std::process::ExitCode;
 use prototypes::{dump, ItemId};
 use tracing_subscriber::EnvFilter;
 
+use blueprint::World;
 use planner::{plan, PlanConfig, PlanRequest, ProductionLine, Rate};
+
+use layout::{solve, LayoutConfig};
 
 fn main() -> ExitCode {
     init_tracing();
@@ -24,16 +27,29 @@ fn main() -> ExitCode {
         .want(ItemId::ELECTRONIC_CIRCUIT, Rate::per_minute(60.0))
         .with_config(config);
     print_targets(&request);
-    match plan(&db, &request) {
-        Ok(line) => {
-            print_plan(&line);
-            ExitCode::SUCCESS
-        }
+    let line = match plan(&db, &request) {
+        Ok(line) => line,
         Err(err) => {
             eprintln!("planning failed: {err}");
-            ExitCode::FAILURE
+            return ExitCode::FAILURE;
         }
+    };
+    print_plan(&line);
+    let world = match solve(&db, &line, &LayoutConfig::new(20, 20)) {
+        Ok(world) => world,
+        Err(err) => {
+            eprintln!("layout failed: {err}");
+            return ExitCode::FAILURE;
+        }
+    };
+    print_layout(&world);
+    let output = png_path();
+    if let Err(err) = world.render().export_as_png(&output) {
+        eprintln!("png export failed: {err}");
+        return ExitCode::FAILURE;
     }
+    println!("\nwrote {}", output.display());
+    ExitCode::SUCCESS
 }
 
 fn init_tracing() {
@@ -45,7 +61,11 @@ fn init_tracing() {
 }
 
 fn dump_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../prototypes/resources/data-raw-dump.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/prototypes/resources/data-raw-dump.json")
+}
+
+fn png_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../plan-and-layout.png")
 }
 
 fn print_targets(request: &PlanRequest) {
@@ -119,5 +139,12 @@ fn print_outputs(line: &ProductionLine) {
     println!("== Outputs ({}) ==", entries.len());
     for (resource, rate) in entries {
         println!("  {resource}: {rate}");
+    }
+}
+
+fn print_layout(world: &World) {
+    println!("\n== Layout ({} entities) ==", world.len());
+    for entity in world.entities() {
+        println!("  {entity}");
     }
 }

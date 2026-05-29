@@ -1,4 +1,4 @@
-use recipes::{Database, MachineId, RecipeId, ResourceId, dump};
+use prototypes::{Database, MachineId, RecipeId, ResourceId, dump};
 
 use planner::{EdgeEndpoint, PlanConfig, PlanRequest, Rate, plan};
 

@@ -1,4 +1,4 @@
-use recipes::ResourceId;
+use prototypes::ResourceId;
 
 use crate::rate::Rate;
 

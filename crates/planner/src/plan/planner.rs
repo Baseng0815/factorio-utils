@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use itertools::Itertools;
 use tracing::{instrument, trace};
 
-use recipes::{CraftingCategory, Database, MachineId, Recipe, RecipeId, ResourceId};
+use prototypes::{CraftingCategory, Database, MachineId, Recipe, RecipeId, ResourceId};
 
 use crate::config::PlanConfig;
 use crate::error::{Error, Result};

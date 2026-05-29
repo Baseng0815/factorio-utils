@@ -106,8 +106,16 @@ pub struct Machine {
     pub crafting_speed: f64,
     pub module_slots: u32,
     pub energy_usage_watts: f64,
+    #[serde(default = "default_tile_size")]
+    pub tile_width: u32,
+    #[serde(default = "default_tile_size")]
+    pub tile_height: u32,
     #[serde(default)]
     pub icon: Option<IconRef>,
+}
+
+fn default_tile_size() -> u32 {
+    1
 }
 
 impl Machine {
@@ -133,8 +141,10 @@ impl std::fmt::Display for Machine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "({}) speed={} slots={} energy={} categories=[{}]",
+            "({}) {}x{} speed={} slots={} energy={} categories=[{}]",
             self.kind,
+            self.tile_width,
+            self.tile_height,
             self.crafting_speed,
             self.module_slots,
             format_watts(self.energy_usage_watts),
@@ -173,6 +183,8 @@ mod tests {
             crafting_speed: 2.0,
             module_slots: 0,
             energy_usage_watts: 0.0,
+            tile_width: 3,
+            tile_height: 3,
             icon: None,
         }
     }
