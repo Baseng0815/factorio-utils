@@ -33,6 +33,9 @@ pub enum Error {
 
     #[error("duplicate entity_number {0}")]
     DuplicateEntityNumber(u64),
+
+    #[error("render error: {0}")]
+    Render(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

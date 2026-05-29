@@ -1,7 +1,7 @@
 use std::env;
 use std::process::ExitCode;
 
-use blueprint::{Entity, decode_string};
+use blueprint::{decode_string, Entity};
 
 fn main() -> ExitCode {
     let _ = tracing_subscriber::fmt()
