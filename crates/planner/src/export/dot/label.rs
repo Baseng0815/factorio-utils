@@ -54,7 +54,7 @@ fn resource_label(
 ) -> String {
     let icon = lookup_resource_icon(resource, db);
     let icon_cell = icon_cell(icon, resolver);
-    let name = escape_html(resource.name());
+    let name = escape_html(resource.as_str());
     let rate_text = escape_html(&rate.to_string());
     table(&[
         &icon_cell,
@@ -64,7 +64,7 @@ fn resource_label(
 }
 
 pub(super) fn edge_label(edge: &ProductionEdge, db: &Database) -> String {
-    let resource = escape_html(edge.resource.name());
+    let resource = escape_html(edge.resource.as_str());
     let rate = escape_html(&edge.rate.to_string());
     let icon = lookup_resource_icon(&edge.resource, db);
     let icon_marker = if icon.is_some() { "•" } else { "" };
@@ -72,13 +72,13 @@ pub(super) fn edge_label(edge: &ProductionEdge, db: &Database) -> String {
 }
 
 fn lookup_machine_icon<'a>(id: &MachineId, db: &'a Database) -> Option<&'a IconRef> {
-    db.machine(id).and_then(|m| m.icon.as_ref())
+    db.machines.get(id).and_then(|m| m.icon.as_ref())
 }
 
 fn lookup_resource_icon<'a>(resource: &ResourceId, db: &'a Database) -> Option<&'a IconRef> {
     match resource {
-        ResourceId::Item(id) => db.item(id).and_then(|i| i.icon.as_ref()),
-        ResourceId::Fluid(id) => db.fluid(id).and_then(|f| f.icon.as_ref()),
+        ResourceId::Item(id) => db.items.get(id).and_then(|i| i.icon.as_ref()),
+        ResourceId::Fluid(id) => db.fluids.get(id).and_then(|f| f.icon.as_ref()),
     }
 }
 

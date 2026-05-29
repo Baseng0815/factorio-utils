@@ -6,6 +6,7 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+itertools = "0.14.0"
 recipes = { path = "../recipes" }
 thiserror = { workspace = true }
 tracing = { workspace = true }

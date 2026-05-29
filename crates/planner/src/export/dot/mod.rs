@@ -115,9 +115,9 @@ fn node_dot_id(id: crate::line::NodeId) -> String {
 }
 
 fn source_dot_id(resource: &ResourceId) -> String {
-    format!("\"src:{}\"", resource.name())
+    format!("\"src:{}\"", resource.as_str())
 }
 
 fn sink_dot_id(resource: &ResourceId) -> String {
-    format!("\"sink:{}\"", resource.name())
+    format!("\"sink:{}\"", resource.as_str())
 }

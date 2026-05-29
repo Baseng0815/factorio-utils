@@ -1,11 +1,10 @@
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
+use itertools::Itertools;
 use tracing::{instrument, trace};
 
-use recipes::{
-    CraftingCategory, Database, MachineId, Recipe, RecipeId, ResourceId,
-};
+use recipes::{CraftingCategory, Database, MachineId, Recipe, RecipeId, ResourceId};
 
 use crate::config::PlanConfig;
 use crate::error::{Error, Result};
@@ -46,8 +45,12 @@ impl<'a> Planner<'a> {
         }
     }
 
-    pub fn add_target(&mut self, resource: ResourceId, rate: Rate) -> Result<()> {
-        self.demand(resource, rate.as_per_second(), EdgeEndpoint::External)
+    pub fn add_target(&mut self, resource: impl Into<ResourceId>, rate: Rate) -> Result<()> {
+        self.demand(
+            &resource.into(),
+            rate.as_per_second(),
+            EdgeEndpoint::External,
+        )
     }
 
     pub fn finish(mut self) -> ProductionLine {
@@ -84,12 +87,17 @@ impl<'a> Planner<'a> {
             .collect();
         for (resource, rate) in surplus {
             let producer = self.producer_for[&resource];
-            self.add_flow(EdgeEndpoint::Node(producer), EdgeEndpoint::External, &resource, rate);
+            self.add_flow(
+                EdgeEndpoint::Node(producer),
+                EdgeEndpoint::External,
+                &resource,
+                rate,
+            );
         }
     }
 
     #[instrument(level = "trace", skip(self, consumer), fields(resource = %resource, rate))]
-    fn demand(&mut self, resource: ResourceId, rate: f64, consumer: EdgeEndpoint) -> Result<()> {
+    fn demand(&mut self, resource: &ResourceId, rate: f64, consumer: EdgeEndpoint) -> Result<()> {
         if rate <= SURPLUS_EPSILON {
             return Ok(());
         }
@@ -97,7 +105,12 @@ impl<'a> Planner<'a> {
         if from_surplus > 0.0 {
             let producer = self.producer_for[&resource];
             trace!(from_surplus, "satisfied partially from surplus");
-            self.add_flow(EdgeEndpoint::Node(producer), consumer, &resource, from_surplus);
+            self.add_flow(
+                EdgeEndpoint::Node(producer),
+                consumer,
+                &resource,
+                from_surplus,
+            );
         }
         if remaining <= SURPLUS_EPSILON {
             return Ok(());
@@ -113,7 +126,8 @@ impl<'a> Planner<'a> {
         let available = self.surplus.get(resource).copied().unwrap_or(0.0);
         let from_surplus = available.min(rate);
         if from_surplus > 0.0 {
-            self.surplus.insert(resource.clone(), available - from_surplus);
+            self.surplus
+                .insert(resource.clone(), available - from_surplus);
         }
         (from_surplus, rate - from_surplus)
     }
@@ -122,13 +136,12 @@ impl<'a> Planner<'a> {
         if self.config.raw.contains(resource) {
             return true;
         }
+
         if self.config.recipe_for.contains_key(resource) {
             return false;
         }
-        self.db
-            .recipes_producing(resource.name())
-            .next()
-            .is_none()
+
+        self.db.recipes_producing(resource.clone()).next().is_none()
     }
 
     fn record_raw(&mut self, resource: &ResourceId, rate: f64, consumer: EdgeEndpoint) {
@@ -139,47 +152,53 @@ impl<'a> Planner<'a> {
 
     fn demand_from_recipe(
         &mut self,
-        resource: ResourceId,
+        resource: &ResourceId,
         rate: f64,
         consumer: EdgeEndpoint,
     ) -> Result<()> {
-        let recipe_id = self.pick_recipe(&resource)?;
+        let recipe_id = self.pick_recipe(resource)?.clone();
         let recipe = self
             .db
-            .recipe(&recipe_id)
+            .recipes
+            .get(&recipe_id)
             .ok_or_else(|| Error::UnknownRecipe(recipe_id.clone()))?
             .clone();
-        if !recipe.produces(resource.name()) {
-            return Err(Error::RecipeDoesNotProduce(recipe_id, resource));
+
+        if !recipe.produces(resource.clone()) {
+            return Err(Error::RecipeDoesNotProduce(recipe_id, resource.clone()));
         }
+
         if self.visiting.contains(&recipe_id) {
             return Err(Error::Cycle(recipe_id));
         }
-        let node_id = self.ensure_node(&recipe)?;
-        let yield_per_run = recipe.expected_yield(resource.name());
+
+        let node_id = self.ensure_node(&recipe_id, &recipe)?;
+        let yield_per_run = recipe.expected_yield(resource.clone());
         if yield_per_run <= 0.0 {
-            return Err(Error::NoYield(recipe_id, resource));
+            return Err(Error::NoYield(recipe_id, resource.clone()));
         }
         let new_runs = rate / yield_per_run;
+
         self.add_runs(node_id, &recipe, new_runs);
-        self.bank_coproducts(&recipe, &resource, new_runs);
-        self.add_flow(EdgeEndpoint::Node(node_id), consumer, &resource, rate);
-        self.recurse_ingredients(&recipe, new_runs, node_id)?;
+        self.bank_coproducts(&recipe, resource, new_runs);
+        self.add_flow(EdgeEndpoint::Node(node_id), consumer, resource, rate);
+        self.recurse_ingredients(&recipe_id, &recipe, new_runs, node_id)?;
+
         Ok(())
     }
 
-    fn ensure_node(&mut self, recipe: &Recipe) -> Result<NodeId> {
+    fn ensure_node(&mut self, recipe_id: &RecipeId, recipe: &Recipe) -> Result<NodeId> {
         if let Some(&id) = self.producer_for.get(&recipe.products[0].resource) {
-            if self.nodes[id.index()].recipe == recipe.id {
+            if &self.nodes[id.index()].recipe == recipe_id {
                 return Ok(id);
             }
         }
         let machine_id = self.pick_machine(&recipe.category)?;
         let id = NodeId::new(self.nodes.len());
-        trace!(node = %id, recipe = %recipe.id, machine = %machine_id, "creating production node");
+        trace!(node = %id, recipe = %recipe_id, machine = %machine_id, "creating production node");
         self.nodes.push(ProductionNode {
             id,
-            recipe: recipe.id.clone(),
+            recipe: recipe_id.clone(),
             machine: machine_id,
             runs_per_second: 0.0,
             machines_needed: 0.0,
@@ -195,10 +214,15 @@ impl<'a> Planner<'a> {
         node.runs_per_second += runs;
         let machine = self
             .db
-            .machine(&node.machine)
+            .machines
+            .get(&node.machine)
             .expect("machine was picked from db");
         let cps = machine.crafts_per_second(recipe.crafting_time);
-        node.machines_needed = if cps > 0.0 { node.runs_per_second / cps } else { 0.0 };
+        node.machines_needed = if cps > 0.0 {
+            node.runs_per_second / cps
+        } else {
+            0.0
+        };
     }
 
     fn bank_coproducts(&mut self, recipe: &Recipe, primary: &ResourceId, new_runs: f64) {
@@ -215,38 +239,38 @@ impl<'a> Planner<'a> {
 
     fn recurse_ingredients(
         &mut self,
+        recipe_id: &RecipeId,
         recipe: &Recipe,
         new_runs: f64,
         node_id: NodeId,
     ) -> Result<()> {
-        self.visiting.insert(recipe.id.clone());
+        self.visiting.insert(recipe_id.clone());
         for ingredient in &recipe.ingredients {
             let ing_rate = ingredient.amount * new_runs;
-            self.demand(
-                ingredient.resource.clone(),
-                ing_rate,
-                EdgeEndpoint::Node(node_id),
-            )?;
+            self.demand(&ingredient.resource, ing_rate, EdgeEndpoint::Node(node_id))?;
         }
-        self.visiting.remove(&recipe.id);
+        self.visiting.remove(recipe_id);
         Ok(())
     }
 
-    fn pick_recipe(&self, resource: &ResourceId) -> Result<RecipeId> {
+    fn pick_recipe(&self, resource: &ResourceId) -> Result<&RecipeId> {
         if let Some(id) = self.config.recipe_for.get(resource) {
-            return Ok(id.clone());
+            return Ok(id);
         }
-        let candidates: Vec<RecipeId> = self
+
+        let candidates: Vec<&RecipeId> = self
             .db
-            .recipes_producing(resource.name())
-            .map(|r| r.id.clone())
-            .collect();
+            .recipes_producing(resource.clone())
+            .collect_vec();
+
         match candidates.len() {
             0 => Err(Error::NoRecipe(resource.clone())),
-            1 => Ok(candidates.into_iter().next().unwrap()),
-            _ => Err(Error::AmbiguousRecipe {
-                resource: resource.clone(),
-                candidates,
+            1 => Ok(candidates[0]),
+            _ => resolve_ambiguity(resource, &candidates).ok_or_else(|| {
+                Error::AmbiguousRecipe {
+                    resource: resource.clone(),
+                    candidates: candidates.into_iter().cloned().collect(),
+                }
             }),
         }
     }
@@ -256,13 +280,15 @@ impl<'a> Planner<'a> {
             return Ok(id.clone());
         }
         self.db
-            .machines_for_category(category)
-            .max_by(|a, b| {
+            .machines
+            .iter()
+            .filter(|(_, m)| m.supports(category))
+            .max_by(|(_, a), (_, b)| {
                 a.crafting_speed
                     .partial_cmp(&b.crafting_speed)
                     .unwrap_or(Ordering::Equal)
             })
-            .map(|m| m.id.clone())
+            .map(|(id, _)| id.clone())
             .ok_or_else(|| Error::NoMachineForCategory(category.clone()))
     }
 
@@ -284,4 +310,16 @@ fn compute_outputs(edges: &[ProductionEdge]) -> HashMap<ResourceId, Rate> {
         }
     }
     outputs
+}
+
+/// Try to resolve a recipe ambiguity by checking whether a recipe with the same
+/// name as the requested product exists and if so, return it. Otherwise return [None].
+fn resolve_ambiguity<'a>(want: &ResourceId, candidates: &[&'a RecipeId]) -> Option<&'a RecipeId> {
+    for candidate in candidates.iter() {
+        if candidate.as_str() == want.as_str() {
+            return Some(*candidate);
+        }
+    }
+
+    None
 }

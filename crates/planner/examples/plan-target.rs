@@ -2,17 +2,13 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use recipes::{dump, CraftingCategory, ItemId, MachineId, RecipeId, ResourceId};
+use recipes::{dump, ItemId};
 use tracing_subscriber::EnvFilter;
 
 use planner::{plan, PlanConfig, PlanRequest, ProductionLine, Rate};
 
-const DEFAULT_TARGET: &str = "electronic-circuit";
-const DEFAULT_RATE_PER_MIN: f64 = 60.0;
-
 fn main() -> ExitCode {
     init_tracing();
-    let (target, rate_per_min) = parse_args();
     let path = dump_path();
     let db = match dump::load_from_path(&path) {
         Ok(db) => db,
@@ -22,29 +18,10 @@ fn main() -> ExitCode {
         }
     };
     let config = PlanConfig::new()
-        .with_recipe(
-            ResourceId::Item(ItemId::from("electronic-circuit")),
-            RecipeId::from("electronic-circuit"),
-        )
-        .with_recipe(
-            ResourceId::Item(ItemId::from("iron-plate")),
-            RecipeId::from("iron-plate"),
-        )
-        .with_recipe(
-            ResourceId::Item(ItemId::from("copper-cable")),
-            RecipeId::from("copper-cable"),
-        )
-        .with_recipe(
-            ResourceId::Item(ItemId::from("copper-plate")),
-            RecipeId::from("copper-plate"),
-        )
-        .with_raw(ResourceId::Item(ItemId::from("iron-ore")))
-        .with_raw(ResourceId::Item(ItemId::from("copper-ore")));
+        .with_raw(ItemId::IRON_ORE)
+        .with_raw(ItemId::COPPER_ORE);
     let request = PlanRequest::new()
-        .want(
-            ResourceId::Item(ItemId::from(target.as_str())),
-            Rate::per_minute(rate_per_min),
-        )
+        .want(ItemId::ELECTRONIC_CIRCUIT, Rate::per_minute(60.0))
         .with_config(config);
     print_targets(&request);
     match plan(&db, &request) {
@@ -69,22 +46,6 @@ fn init_tracing() {
 
 fn dump_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../recipes/resources/data-raw-dump.json")
-}
-
-fn parse_args() -> (String, f64) {
-    let mut args = std::env::args().skip(1);
-    let target = args.next().unwrap_or_else(|| {
-        eprintln!(
-            "usage: plan-target [ITEM] [RATE_PER_MIN] \
-             (defaulting to {DEFAULT_TARGET} at {DEFAULT_RATE_PER_MIN}/min)\n"
-        );
-        DEFAULT_TARGET.to_owned()
-    });
-    let rate = args
-        .next()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(DEFAULT_RATE_PER_MIN);
-    (target, rate)
 }
 
 fn print_targets(request: &PlanRequest) {
@@ -131,8 +92,8 @@ fn print_edges(line: &ProductionLine) {
     let mut edges: Vec<_> = line.edges.iter().collect();
     edges.sort_by(|a, b| {
         a.resource
-            .name()
-            .cmp(b.resource.name())
+            .as_str()
+            .cmp(b.resource.as_str())
             .then_with(|| a.from.to_string().cmp(&b.from.to_string()))
     });
     println!("== Edges ({}) ==", edges.len());
@@ -144,7 +105,7 @@ fn print_edges(line: &ProductionLine) {
 
 fn print_raw_inputs(line: &ProductionLine) {
     let mut entries: Vec<_> = line.raw_inputs.iter().collect();
-    entries.sort_by(|(a, _), (b, _)| a.name().cmp(b.name()));
+    entries.sort_by(|(a, _), (b, _)| a.as_str().cmp(b.as_str()));
     println!("== Raw Inputs ({}) ==", entries.len());
     for (resource, rate) in entries {
         println!("  {resource}: {rate}");
@@ -154,7 +115,7 @@ fn print_raw_inputs(line: &ProductionLine) {
 
 fn print_outputs(line: &ProductionLine) {
     let mut entries: Vec<_> = line.outputs.iter().collect();
-    entries.sort_by(|(a, _), (b, _)| a.name().cmp(b.name()));
+    entries.sort_by(|(a, _), (b, _)| a.as_str().cmp(b.as_str()));
     println!("== Outputs ({}) ==", entries.len());
     for (resource, rate) in entries {
         println!("  {resource}: {rate}");

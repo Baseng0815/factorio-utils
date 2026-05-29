@@ -16,8 +16,8 @@ impl PlanConfig {
         Self::default()
     }
 
-    pub fn with_recipe(mut self, resource: ResourceId, recipe: RecipeId) -> Self {
-        self.recipe_for.insert(resource, recipe);
+    pub fn with_recipe(mut self, resource: impl Into<ResourceId>, recipe: RecipeId) -> Self {
+        self.recipe_for.insert(resource.into(), recipe);
         self
     }
 
@@ -26,8 +26,8 @@ impl PlanConfig {
         self
     }
 
-    pub fn with_raw(mut self, resource: ResourceId) -> Self {
-        self.raw.insert(resource);
+    pub fn with_raw(mut self, resource: impl Into<ResourceId>) -> Self {
+        self.raw.insert(resource.into());
         self
     }
 }
@@ -43,8 +43,8 @@ impl PlanRequest {
         Self::default()
     }
 
-    pub fn want(mut self, resource: ResourceId, rate: Rate) -> Self {
-        *self.targets.entry(resource).or_insert(Rate::ZERO) += rate;
+    pub fn want(mut self, resource: impl Into<ResourceId>, rate: Rate) -> Self {
+        *self.targets.entry(resource.into()).or_insert(Rate::ZERO) += rate;
         self
     }
 
