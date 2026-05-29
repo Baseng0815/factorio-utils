@@ -2,10 +2,10 @@ use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use recipes::{ItemId, ResourceId, dump};
+use recipes::{dump, CraftingCategory, ItemId, MachineId, RecipeId, ResourceId};
 use tracing_subscriber::EnvFilter;
 
-use planner::{PlanRequest, ProductionLine, Rate, plan};
+use planner::{plan, PlanConfig, PlanRequest, ProductionLine, Rate};
 
 const DEFAULT_TARGET: &str = "electronic-circuit";
 const DEFAULT_RATE_PER_MIN: f64 = 60.0;
@@ -21,10 +21,31 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let request = PlanRequest::new().want(
-        ResourceId::Item(ItemId::from(target.as_str())),
-        Rate::per_minute(rate_per_min),
-    );
+    let config = PlanConfig::new()
+        .with_recipe(
+            ResourceId::Item(ItemId::from("electronic-circuit")),
+            RecipeId::from("electronic-circuit"),
+        )
+        .with_recipe(
+            ResourceId::Item(ItemId::from("iron-plate")),
+            RecipeId::from("iron-plate"),
+        )
+        .with_recipe(
+            ResourceId::Item(ItemId::from("copper-cable")),
+            RecipeId::from("copper-cable"),
+        )
+        .with_recipe(
+            ResourceId::Item(ItemId::from("copper-plate")),
+            RecipeId::from("copper-plate"),
+        )
+        .with_raw(ResourceId::Item(ItemId::from("iron-ore")))
+        .with_raw(ResourceId::Item(ItemId::from("copper-ore")));
+    let request = PlanRequest::new()
+        .want(
+            ResourceId::Item(ItemId::from(target.as_str())),
+            Rate::per_minute(rate_per_min),
+        )
+        .with_config(config);
     print_targets(&request);
     match plan(&db, &request) {
         Ok(line) => {
@@ -47,7 +68,7 @@ fn init_tracing() {
 }
 
 fn dump_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../recipes/resources/database-dump.json")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../recipes/resources/data-raw-dump.json")
 }
 
 fn parse_args() -> (String, f64) {
