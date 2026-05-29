@@ -39,6 +39,10 @@
             pkgs.cargo-nextest
           ];
           RUST_SRC_PATH = "${rustToolchain}/lib/rustlib/src/rust/library";
+
+          shellHook = ''
+            zsh
+          '';
         };
 
         formatter = pkgs.nixpkgs-fmt;
